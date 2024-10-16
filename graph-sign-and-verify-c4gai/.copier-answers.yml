@@ -1,0 +1,12 @@
+# Changes here will be overwritten by Copier
+_commit: v7.0.0
+_src_path: gh:eccenca/cmem-plugin-template
+author_mail: magnus.knuth@eccenca.com
+author_name: eccenca GmbH
+github_page: ''
+project_description: Sign and verify your awesome Knowledge Graphs with eccenca Corporate
+    Memory :-)
+project_slug: graph-sign-and-verify-c4gai
+project_type: generic
+pypi: false
+
