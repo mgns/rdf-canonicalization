@@ -11,5 +11,6 @@
 <https://crypto4graph-ai.eccenca.dev/data/Item-1> <http://example.org/vocab/unitPrice> "123.33" .
 <https://crypto4graph-ai.eccenca.dev/data/Product-1> <http://example.org/vocab/manufacturer> <https://crypto4graph-ai.eccenca.dev/data/Manufacturer-1> .
 <https://crypto4graph-ai.eccenca.dev/data/Product-1> <http://example.org/vocab/productIdentifier> "12345-6789" .
-<https://crypto4graph-ai.eccenca.dev/data/Manufacturer-1> <http://xmlns.com/foaf/0.1/knows> _:b1 .
+
 _:b1 <http://example.org/vocab/productIdentifier> "12345-6789" .
+<https://crypto4graph-ai.eccenca.dev/data/Manufacturer-1> <http://xmlns.com/foaf/0.1/knows> _:b1 .
