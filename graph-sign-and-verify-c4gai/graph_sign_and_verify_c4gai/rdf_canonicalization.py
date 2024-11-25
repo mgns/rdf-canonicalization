@@ -1,5 +1,5 @@
 import hashlib
-from datetime import time, datetime, date
+import timeit
 
 import rdflib
 from collections import defaultdict
@@ -10,7 +10,7 @@ from rdflib import Graph
 from graph_sign_and_verify_c4gai.graphsignature import hash_rdf
 
 
-class RdfNormalize:
+class RdfCanonicalization:
     def __init__(self, graph, max_run_time=None):
         """
         Initialize the RDF normalization process.
@@ -31,7 +31,7 @@ class RdfNormalize:
         """
         Main method to normalize the RDF graph using a deterministic algorithm.
         """
-        self.start_time = datetime.now()
+        self.start_time = timeit.default_timer()
         self.collect_blank_nodes()
         self.issue_canonical_ids()
         return self.serialize_normalized_graph()
@@ -125,14 +125,14 @@ class RdfNormalize:
         return term
 
     def runtime(self):
-        datetime.now() - self.start_time
+        return timeit.default_timer() - self.start_time
 
     def check_runtime(self):
         """
         Check if the maximum runtime has been exceeded.
         """
-#        if self.max_run_time and (self.runtime() > self.max_run_time):
-#            raise TimeoutError("Normalization process exceeded the maximum runtime.")
+        if self.max_run_time and (self.runtime() > self.max_run_time):
+            raise TimeoutError("Normalization process exceeded the maximum runtime.")
 
 class IdentifierIssuer:
     """
@@ -149,7 +149,7 @@ class IdentifierIssuer:
         :return: the deterministic identifier.
         """
         if blank_node not in self.ids:
-            self.ids[blank_node] = f"b{next(self.counter)}"
+            self.ids[blank_node] = f"c14n{next(self.counter)}"
         return self.ids[blank_node]
 
 
@@ -160,7 +160,7 @@ if __name__ == "__main__":
     graph: Graph = rdflib.Graph()
     graph.parse(file, format="turtle")  # Replace with your RDF file path
 
-    normalizer = RdfNormalize(graph, max_run_time=5)
+    normalizer = RdfCanonicalization(graph, max_run_time=5)
     normalized_output = sorted(normalizer.normalize.splitlines())
     print("\n".join(normalized_output))
 
