@@ -33,7 +33,8 @@ class RdfCanonicalization:
         """
         self.start_time = timeit.default_timer()
         self.collect_blank_nodes()
-        self.issue_canonical_ids()
+        self.issue_canonical_ids() # normalization for simple nodes
+        self.issue_n_degree_ids()  # N-degree normalization for remaining nodes
         return self.serialize_normalized_graph()
 
     def collect_blank_nodes(self):
@@ -70,6 +71,100 @@ class RdfCanonicalization:
                     del self.hash_to_blank_id[hash_value]
                     simple = True
 
+    def issue_n_degree_ids(self):
+        """
+        Assign deterministic IDs to blank nodes based on n-degree hash computation.
+        """
+        permutation_limit = 1_000_000  # Example limit on permutations
+        while self.non_normalized:
+            self.check_runtime()
+            hash_to_related_blank_ids = defaultdict(set)
+
+            # Compute n-degree hash for all non-normalized blank nodes
+            for blank_id in self.non_normalized:
+                hash_value = self.hash_n_degree(blank_id)
+                hash_to_related_blank_ids[hash_value].add(blank_id)
+
+            # Sort hash values for deterministic processing
+            sorted_hashes = sorted(hash_to_related_blank_ids.keys())
+
+            for hash_value in sorted_hashes:
+                blank_ids = hash_to_related_blank_ids[hash_value]
+
+                if len(blank_ids) > permutation_limit:
+                    raise ValueError(f"Exceeded the permutation limit for hash {hash_value}")
+
+                # Process each permutation of blank nodes deterministically
+                for permutation in itertools.permutations(blank_ids):
+                    self.check_runtime()
+
+                    issuer = IdentifierIssuer()  # Temporary issuer for this round
+                    for blank_id in permutation:
+                        issuer.get_id(blank_id)
+
+                    # Compute the canonical hash for this permutation
+                    canonical_hash = self.compute_canonical_hash(permutation, issuer)
+
+                    # Assign canonical IDs if this hash is unique
+                    if canonical_hash not in self.canon_issuer.ids:
+                        for blank_id in permutation:
+                            self.canon_issuer.get_id(blank_id)
+                        self.non_normalized -= set(permutation)  # Remove processed nodes
+                        break  # Stop processing this hash group
+        return
+
+    def hash_n_degree(self, blank_id):
+        """
+        Compute an n-degree hash for a blank node by considering its connected triples recursively.
+        :param blank_id: the blank node to hash.
+        :return: the computed hash as a string.
+        """
+        temp_issuer = IdentifierIssuer()
+        stack = [(blank_id, None)]
+        visited = set()
+        serialized_components = []
+
+        while stack:
+            current_node, parent_triple = stack.pop()
+            if current_node in visited:
+                continue
+            visited.add(current_node)
+
+            if isinstance(current_node, rdflib.BNode):
+                identifier = temp_issuer.get_id(current_node)
+            else:
+                identifier = str(current_node)
+
+            if parent_triple:
+                serialized_components.append(self.serialize_quad(parent_triple, blank_id))
+            serialized_components.append(identifier)
+
+            for triple in self.graph.triples((current_node, None, None)):
+                stack.append((triple[2], triple))
+            for triple in self.graph.triples((None, None, current_node)):
+                stack.append((triple[0], triple))
+
+        serialized_data = '\n'.join(sorted(serialized_components)).encode('utf-8')
+        return hashlib.sha256(serialized_data).hexdigest()
+
+    def compute_canonical_hash(self, permutation, temp_issuer):
+        """
+        Compute a canonical hash for a given permutation of blank nodes.
+        :param permutation: a list of blank nodes in a specific order.
+        :param temp_issuer: a temporary IdentifierIssuer instance for the current permutation.
+        :return: the canonical hash as a string.
+        """
+        serialized_components = []
+
+        for blank_id in permutation:
+            temp_id = temp_issuer.get_id(blank_id)
+            quads = self.blank_id_to_quad_set[blank_id]
+            for quad in quads:
+                serialized_components.append(self.serialize_quad(quad, blank_id).replace('_:a', temp_id))
+
+        serialized_data = ''.join(sorted(serialized_components)).encode('utf-8')
+        return hashlib.sha256(serialized_data).hexdigest()
+
     def hash_first_degree(self, blank_id):
         """
         Compute the first-degree hash for a blank node based on its adjacent triples.
@@ -78,7 +173,7 @@ class RdfCanonicalization:
         """
         quads = self.blank_id_to_quad_set[blank_id]
         serialized_quads = sorted(self.serialize_quad(q, blank_id) for q in quads)
-        serialized_data = ''.join(serialized_quads).encode('utf-8')
+        serialized_data = '\n'.join(serialized_quads).encode('utf-8')
         return hashlib.sha256(serialized_data).hexdigest()
 
     def serialize_quad(self, quad, blank_id):
@@ -155,7 +250,8 @@ class IdentifierIssuer:
 
 # Example Usage
 if __name__ == "__main__":
-    file = "order-1.nt"
+    #file = "order-1.nt"
+    file = "../tests/rdfc10/test023-in.nq"
 
     graph: Graph = rdflib.Graph()
     graph.parse(file, format="turtle")  # Replace with your RDF file path
@@ -165,7 +261,7 @@ if __name__ == "__main__":
     print("\n".join(normalized_output))
 
     # Hash the canonical graph
-    rdf_hash = hash_rdf("\n".join(normalized_output))
+    rdf_hash = hash_rdf('\n'.join(normalized_output))
     print("Hash:", rdf_hash.hex())
     with open(file + ".sha", "a") as f:
         f.write(rdf_hash.hex())
