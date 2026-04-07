@@ -13,7 +13,7 @@ readme = "README-public.md"
 
 [tool.poetry.dependencies]
 python = ">=3.13, ^3"
-cryptography = "46.0.5"
+cryptography = "^46.0.5"
 rdflib = "^7.6.0"
 
 
