@@ -2,7 +2,7 @@
 
 Sign and verify your awesome Knowledge Graphs with eccenca Corporate Memory :-)
 
-  
+[![workflow](https://github.com/eccenca/rdf-canonicalization/actions/workflows/check.yml/badge.svg)](https://github.com/eccenca/rdf-canonicalization/actions) [![pypi version](https://img.shields.io/pypi/v/graph-sign-and-verify-c4gai)](https://pypi.org/project/graph-sign-and-verify-c4gai) [![license](https://img.shields.io/pypi/l/graph-sign-and-verify-c4gai)](https://pypi.org/project/graph-sign-and-verify-c4gai)
 [![poetry][poetry-shield]][poetry-link] [![ruff][ruff-shield]][ruff-link] [![mypy][mypy-shield]][mypy-link] [![copier][copier-shield]][copier] 
 
 ## Usage

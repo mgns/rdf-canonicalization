@@ -1,12 +1,12 @@
 # Changes here will be overwritten by Copier
-_commit: v8.3.2
+_commit: v8.5.0-4-gd5f8597
 _src_path: gh:eccenca/cmem-plugin-template
 author_mail: cmempy-developer@eccenca.com
 author_name: eccenca GmbH
-github_page: ''
+github_page: https://github.com/eccenca/rdf-canonicalization
 project_description: Sign and verify your awesome Knowledge Graphs with eccenca Corporate
     Memory :-)
 project_slug: graph-sign-and-verify-c4gai
 project_type: generic
-pypi: false
+pypi: true
 
