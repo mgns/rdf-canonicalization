@@ -7,7 +7,7 @@ from pathlib import Path
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from cryptography.hazmat.primitives.asymmetric import padding, rsa, utils
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey, RSAPublicKey
 from cryptography.hazmat.primitives.serialization import (
     Encoding,
@@ -43,10 +43,8 @@ def generate_key_pair() -> tuple[RSAPrivateKey, RSAPublicKey]:
 def sign_hash(private_key: RSAPrivateKey, rdf_hash: bytes) -> bytes:
     """Sign rdf_hash with private_key using RSA-PSS/SHA-256.
 
-    Note: rdf_hash is passed as the message to sign; the PSS algorithm then
-    hashes it internally with SHA-256, producing SHA-256(rdf_hash).  If
-    rdf_hash is itself a SHA-256 digest, the result is a double-hash.  See
-    plan item 17 for the fix (use Prehashed or sign the canonical bytes directly).
+    rdf_hash must be a raw SHA-256 digest (32 bytes).  Prehashed tells PSS
+    not to hash it again, so the signed value is exactly rdf_hash.
     """
     return private_key.sign(
         rdf_hash,
@@ -54,7 +52,7 @@ def sign_hash(private_key: RSAPrivateKey, rdf_hash: bytes) -> bytes:
             mgf=padding.MGF1(hashes.SHA256()),
             salt_length=padding.PSS.MAX_LENGTH,
         ),
-        hashes.SHA256(),
+        utils.Prehashed(hashes.SHA256()),
     )
 
 
@@ -72,7 +70,7 @@ def verify_signature(
                 mgf=padding.MGF1(hashes.SHA256()),
                 salt_length=padding.PSS.MAX_LENGTH,
             ),
-            hashes.SHA256(),
+            utils.Prehashed(hashes.SHA256()),
         )
     except InvalidSignature:
         return False
