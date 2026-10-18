@@ -1,7 +1,9 @@
 """RDFC 1.0 (W3C Recommendation 2024) RDF Dataset Canonicalization."""
 
+import argparse
 import hashlib
 import itertools
+import sys
 import timeit
 from collections import defaultdict
 from collections.abc import Iterator
@@ -60,13 +62,13 @@ class RdfCanonicalization:
                 if hasattr(self.graph, "default_graph")
                 else self.graph.default_context
             )
-            default_id = dg.identifier
+            default_id = dg.identifier  # type: ignore[union-attr]
             for s, p, o, ctx in self.graph.quads():
-                g = ctx.identifier if hasattr(ctx, "identifier") else ctx
-                yield s, p, o, None if g == default_id else g
+                g = ctx.identifier if hasattr(ctx, "identifier") else ctx  # type: ignore[union-attr]
+                yield s, p, o, None if g == default_id else g  # type: ignore[misc]
         else:
             for s, p, o in self.graph:
-                yield s, p, o, None
+                yield s, p, o, None  # type: ignore[misc]
 
     def collect_blank_nodes(self) -> None:
         """RDFC 1.0 §4.4.3 step 3: build blank-node to quad-set index."""
@@ -78,7 +80,7 @@ class RdfCanonicalization:
                     self.non_normalized.add(component)
 
     def issue_canonical_ids(self) -> None:
-        """RDFC 1.0 §4.4.3 steps 4-5: single-pass issue of canonical IDs for unique first-degree hashes.
+        """Issue canonical IDs for unique first-degree hash groups (§4.4.3 steps 4-5).
 
         Computes HashFirstDegreeQuads once for every non-normalized blank node, groups them
         by hash, then issues canonical IDs for every singleton group (§4.4.3 step 5).
@@ -393,6 +395,58 @@ class IdentifierIssuer:
 
 
 def main() -> None:
-    """CLI entry point — full implementation pending (plan item 15)."""
-    # TODO: implement real argparse CLI
-    raise NotImplementedError("CLI not yet implemented; see plan item 15")
+    """Canonicalize an RDF file to N-Quads on stdout.
+
+    Reads FILE (or stdin), parses with rdflib, applies RDFC 1.0
+    canonicalization, and writes sorted N-Quads to stdout.
+    """
+    parser = argparse.ArgumentParser(
+        prog="canonicalize",
+        description="RDFC 1.0 RDF Dataset Canonicalization (W3C Recommendation 2024)",
+    )
+    parser.add_argument(
+        "input",
+        nargs="?",
+        metavar="FILE",
+        help="RDF input file; omit or use '-' for stdin",
+    )
+    parser.add_argument(
+        "--format", "-f",
+        default="nquads",
+        dest="fmt",
+        metavar="FORMAT",
+        help="rdflib input format (default: nquads; e.g. turtle, trig)",
+    )
+    parser.add_argument(
+        "--hash-algorithm", "-a",
+        default="sha256",
+        dest="hash_algorithm",
+        metavar="ALGO",
+        help="hash algorithm: sha256 (default) or sha384",
+    )
+    parser.add_argument(
+        "--max-run-time", "-t",
+        type=float,
+        default=None,
+        dest="max_run_time",
+        metavar="SECONDS",
+        help="wall-clock timeout in seconds; exits non-zero on timeout",
+    )
+    args = parser.parse_args()
+
+    g = rdflib.ConjunctiveGraph()
+    try:
+        if args.input is None or args.input == "-":
+            g.parse(data=sys.stdin.read(), format=args.fmt)
+        else:
+            g.parse(args.input, format=args.fmt)
+        result = canonicalize(
+            g,
+            hash_algorithm=args.hash_algorithm,
+            max_run_time=args.max_run_time,
+        )
+    except TimeoutError as exc:
+        sys.exit(f"canonicalize: timeout: {exc}")
+    except Exception as exc:  # noqa: BLE001
+        sys.exit(f"canonicalize: error: {exc}")
+    sys.stdout.write(result)

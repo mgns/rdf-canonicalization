@@ -3,9 +3,9 @@
 Reads tests/rdfc10/manifest.jsonld (from https://github.com/w3c/rdf-canon) and
 generates three parametrized test functions:
 
-  test_rdfc10_eval     – RDFC10EvalTest: compare N-Quads canonical output
-  test_rdfc10_map      – RDFC10MapTest: compare issued blank-node ID map
-  test_rdfc10_negative – RDFC10NegativeEvalTest: poison graph must raise TimeoutError
+  test_rdfc10_eval     - RDFC10EvalTest: compare N-Quads canonical output
+  test_rdfc10_map      - RDFC10MapTest: compare issued blank-node ID map
+  test_rdfc10_negative - RDFC10NegativeEvalTest: poison graph must raise TimeoutError
 """
 
 import json
@@ -47,7 +47,11 @@ _NEG_CASES = [
 # N-Quads parser that preserves blank-node labels
 # ---------------------------------------------------------------------------
 
-def _parse(path: Path) -> rdflib.Dataset:
+_QUAD_TOKENS = 4   # token count for a named-graph quad: s p o g
+_TRIPLE_TOKENS = 3  # token count for a default-graph triple: s p o
+
+
+def _parse(path: Path) -> rdflib.Dataset:  # noqa: C901, PLR0912, PLR0915
     """Parse N-Quads into a Dataset, preserving blank-node labels.
 
     rdflib's default parser renames blank nodes to UUIDs.  We preserve the
@@ -139,10 +143,10 @@ def _parse(path: Path) -> rdflib.Dataset:
                 continue
             tokens.append(line[pos:end])
             pos = end
-        if len(tokens) >= 4:
+        if len(tokens) >= _QUAD_TOKENS:
             ctx = g.get_context(_term(tokens[3]))
             ctx.add((_term(tokens[0]), _term(tokens[1]), _term(tokens[2])))
-        elif len(tokens) >= 3:
+        elif len(tokens) >= _TRIPLE_TOKENS:
             default_ctx = g.default_graph if hasattr(g, "default_graph") else g.default_context
             default_ctx.add((_term(tokens[0]), _term(tokens[1]), _term(tokens[2])))
     return g
@@ -169,7 +173,7 @@ def _issued_map(graph: rdflib.Dataset, hash_algorithm: str = "sha256") -> dict[s
     Values are the canonical ID strings (without ``_:`` prefix, e.g. ``c14n0``).
     """
     c = RdfCanonicalization(graph, hash_algorithm=hash_algorithm)
-    c.normalize
+    _ = c.normalize
     # canon_issuer.ids: {BNode('e0'): '_:c14n0', ...}
     return {str(bn): cid[2:] for bn, cid in c.canon_issuer.ids.items()}
 
@@ -178,8 +182,8 @@ def _issued_map(graph: rdflib.Dataset, hash_algorithm: str = "sha256") -> dict[s
 # Test functions
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("test_id,entry", _EVAL_CASES, ids=[t[0] for t in _EVAL_CASES])
-def test_rdfc10_eval(test_id: str, entry: dict) -> None:
+@pytest.mark.parametrize(("test_id", "entry"), _EVAL_CASES, ids=[t[0] for t in _EVAL_CASES])
+def test_rdfc10_eval(test_id: str, entry: dict) -> None:  # noqa: ARG001
     """RDFC10EvalTest: canonicalize input, compare sorted N-Quads to expected."""
     algo = entry.get("hashAlgorithm", "SHA256")
     graph = _parse(TESTS_DIR / entry["action"])
@@ -190,8 +194,8 @@ def test_rdfc10_eval(test_id: str, entry: dict) -> None:
     assert actual == expected
 
 
-@pytest.mark.parametrize("test_id,entry", _MAP_CASES, ids=[t[0] for t in _MAP_CASES])
-def test_rdfc10_map(test_id: str, entry: dict) -> None:
+@pytest.mark.parametrize(("test_id", "entry"), _MAP_CASES, ids=[t[0] for t in _MAP_CASES])
+def test_rdfc10_map(test_id: str, entry: dict) -> None:  # noqa: ARG001
     """RDFC10MapTest: canonicalize input, compare issued blank-node ID map."""
     algo = entry.get("hashAlgorithm", "SHA256")
     graph = _parse(TESTS_DIR / entry["action"])
@@ -200,8 +204,8 @@ def test_rdfc10_map(test_id: str, entry: dict) -> None:
     assert actual == expected
 
 
-@pytest.mark.parametrize("test_id,entry", _NEG_CASES, ids=[t[0] for t in _NEG_CASES])
-def test_rdfc10_negative(test_id: str, entry: dict) -> None:
+@pytest.mark.parametrize(("test_id", "entry"), _NEG_CASES, ids=[t[0] for t in _NEG_CASES])
+def test_rdfc10_negative(test_id: str, entry: dict) -> None:  # noqa: ARG001
     """RDFC10NegativeEvalTest: poison graph must raise TimeoutError."""
     graph = _parse(TESTS_DIR / entry["action"])
     with pytest.raises(TimeoutError):
