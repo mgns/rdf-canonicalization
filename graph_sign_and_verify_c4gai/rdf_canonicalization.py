@@ -35,15 +35,19 @@ class RdfCanonicalization:
         graph: ConjunctiveGraph | Graph,
         max_run_time: float | None = None,
         hash_algorithm: str = "sha256",
+        max_work_factor: int | None = None,
     ) -> None:
         self.graph = graph
         self.max_run_time = max_run_time
+        self.max_work_factor = max_work_factor
         self._hash_alg = hash_algorithm.lower().replace("-", "")
         self.blank_id_to_quad_set: defaultdict[rdflib.BNode, set[_Quad]] = defaultdict(set)
         self.canon_issuer = IdentifierIssuer()
         self.hash_to_blank_id: defaultdict[str, set[rdflib.BNode]] = defaultdict(set)
         self.non_normalized: set[rdflib.BNode] = set()
         self.start_time: float = 0.0
+        self._work_counter: int = 0
+        self._max_work: int | None = None
 
     @property
     def normalize(self) -> str:
@@ -71,13 +75,19 @@ class RdfCanonicalization:
                 yield s, p, o, None  # type: ignore[misc]
 
     def collect_blank_nodes(self) -> None:
-        """RDFC 1.0 §4.4.3 step 3: build blank-node to quad-set index."""
+        """RDFC 1.0 §4.4.3 step 3: build blank-node to quad-set index.
+
+        Also computes the permutation-step budget when max_work_factor is set:
+        budget = max_work_factor * max(1, number_of_blank_nodes).
+        """
         for s, p, o, g in self._iter_quads():
             quad = (s, p, o, g)
             for component in (s, o, g):
                 if isinstance(component, rdflib.BNode):
                     self.blank_id_to_quad_set[component].add(quad)
                     self.non_normalized.add(component)
+        if self.max_work_factor is not None:
+            self._max_work = self.max_work_factor * max(1, len(self.non_normalized))
 
     def issue_canonical_ids(self) -> None:
         """Issue canonical IDs for unique first-degree hash groups (§4.4.3 steps 4-5).
@@ -152,6 +162,12 @@ class RdfCanonicalization:
             chosen_path = ""
             chosen_issuer = None
             for permutation in itertools.permutations(sorted(related_bnodes, key=str)):
+                self._work_counter += 1
+                if self._max_work is not None and self._work_counter > self._max_work:
+                    raise TimeoutError(
+                        f"Normalization exceeded work factor limit "
+                        f"({self._max_work} permutation steps).",
+                    )
                 self.check_runtime()
                 issuer_copy = issuer.copy()
                 path = ""
@@ -331,6 +347,7 @@ def canonicalize(
     *,
     hash_algorithm: str = "sha256",
     max_run_time: float | None = None,
+    max_work_factor: int | None = None,
 ) -> str:
     r"""Canonicalize an RDF dataset using RDFC 1.0 (W3C Recommendation 2024).
 
@@ -344,6 +361,10 @@ def canonicalize(
         max_run_time: Optional wall-clock limit in seconds.  Raises
                       ``TimeoutError`` if exceeded (protects against
                       poison-graph inputs).
+        max_work_factor: Optional machine-independent limit.  The budget is
+                         ``max_work_factor * max(1, blank_node_count)``
+                         permutation steps.  Raises ``TimeoutError`` when
+                         exceeded.  Use alongside or instead of ``max_run_time``.
 
     Returns:
         Canonical N-Quads string: lines sorted by Unicode code point, each
@@ -357,7 +378,10 @@ def canonicalize(
     else:
         graph = dataset
     return RdfCanonicalization(
-        graph, max_run_time=max_run_time, hash_algorithm=hash_algorithm
+        graph,
+        max_run_time=max_run_time,
+        hash_algorithm=hash_algorithm,
+        max_work_factor=max_work_factor,
     ).normalize
 
 
@@ -432,6 +456,14 @@ def main() -> None:
         metavar="SECONDS",
         help="wall-clock timeout in seconds; exits non-zero on timeout",
     )
+    parser.add_argument(
+        "--max-work-factor", "-w",
+        type=int,
+        default=None,
+        dest="max_work_factor",
+        metavar="N",
+        help="machine-independent limit: N * blank-node-count permutation steps",
+    )
     args = parser.parse_args()
 
     g = rdflib.ConjunctiveGraph()
@@ -444,6 +476,7 @@ def main() -> None:
             g,
             hash_algorithm=args.hash_algorithm,
             max_run_time=args.max_run_time,
+            max_work_factor=args.max_work_factor,
         )
     except TimeoutError as exc:
         sys.exit(f"canonicalize: timeout: {exc}")

@@ -160,9 +160,15 @@ def _normalize(
     graph: rdflib.Dataset,
     max_run_time: float | None = None,
     hash_algorithm: str = "sha256",
+    max_work_factor: int | None = None,
 ) -> list[str]:
     """Return sorted canonical N-Quads lines via the public canonicalize() API."""
-    output = canonicalize(graph, hash_algorithm=hash_algorithm, max_run_time=max_run_time)
+    output = canonicalize(
+        graph,
+        hash_algorithm=hash_algorithm,
+        max_run_time=max_run_time,
+        max_work_factor=max_work_factor,
+    )
     return sorted(line for line in output.splitlines() if line.strip())
 
 
@@ -210,3 +216,11 @@ def test_rdfc10_negative(test_id: str, entry: dict) -> None:  # noqa: ARG001
     graph = _parse(TESTS_DIR / entry["action"])
     with pytest.raises(TimeoutError):
         _normalize(graph, max_run_time=2.0)
+
+
+@pytest.mark.parametrize(("test_id", "entry"), _NEG_CASES, ids=[t[0] for t in _NEG_CASES])
+def test_rdfc10_negative_work_factor(test_id: str, entry: dict) -> None:  # noqa: ARG001
+    """Poison graph must raise TimeoutError when the work-factor limit is hit."""
+    graph = _parse(TESTS_DIR / entry["action"])
+    with pytest.raises(TimeoutError):
+        _normalize(graph, max_work_factor=10)
