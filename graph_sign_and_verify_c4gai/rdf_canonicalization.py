@@ -20,7 +20,7 @@ _DEFAULT_GRAPH_ID = rdflib.URIRef("urn:x-rdflib:default")
 
 _Quad = tuple[rdflib.term.Node, rdflib.URIRef, rdflib.term.Node, rdflib.term.Node | None]
 _NQ_CTRL_LIMIT = 0x20  # code points below this require \uXXXX escape in N-Quads
-_NQ_DEL = 0x7F         # DELETE also requires \uXXXX
+_NQ_DEL = 0x7F  # DELETE also requires \uXXXX
 
 
 class RdfCanonicalization:
@@ -150,9 +150,7 @@ class RdfCanonicalization:
         for quad in self.blank_id_to_quad_set[blank_id]:
             s, p, o, g = quad
             # position 'g' has no predicate (§4.7)
-            for position, component, predicate in (
-                ("s", s, p), ("o", o, p), ("g", g, None)
-            ):
+            for position, component, predicate in (("s", s, p), ("o", o, p), ("g", g, None)):
                 if isinstance(component, rdflib.BNode) and component != blank_id:
                     h = self._hash_related_blank_node(component, issuer, predicate, position)
                     h_to_bnodes[h].append(component)
@@ -173,10 +171,9 @@ class RdfCanonicalization:
                 if self.max_run_time and self._work_counter % 256 == 0:
                     self.check_runtime()
                 component = related_bnodes[0]
-                if (
-                    (cid := self.canon_issuer.ids.get(component)) is not None
-                    or (cid := issuer.ids.get(component)) is not None
-                ):
+                if (cid := self.canon_issuer.ids.get(component)) is not None or (
+                    cid := issuer.ids.get(component)
+                ) is not None:
                     chosen_path = cid
                 else:
                     chosen_path = issuer.get_id(component)
@@ -201,10 +198,9 @@ class RdfCanonicalization:
                 recursion_list: list[rdflib.BNode] = []
                 skip = False
                 for component in permutation:
-                    if (
-                        (cid := self.canon_issuer.ids.get(component)) is not None
-                        or (cid := issuer_copy.ids.get(component)) is not None
-                    ):
+                    if (cid := self.canon_issuer.ids.get(component)) is not None or (
+                        cid := issuer_copy.ids.get(component)
+                    ) is not None:
                         path += cid
                     else:
                         path += issuer_copy.get_id(component)
@@ -265,6 +261,7 @@ class RdfCanonicalization:
         and blank nodes that already have a canonical ID with that ID (§4.6 step 3.1).
         Output ends with ' .\n' so concatenation gives canonical N-Quads form (§4.6 step 3.2).
         """
+
         def term(t: rdflib.term.Node) -> str:
             if t == blank_id:
                 return "_:a"
@@ -290,6 +287,7 @@ class RdfCanonicalization:
         Replaces each blank node with its canonical ID (§4.3 / §4.5), then sorts all lines
         by Unicode code point order and concatenates them.
         """
+
         def canon_term(t: rdflib.term.Node) -> str:
             if isinstance(t, rdflib.BNode):
                 cid = self.canon_issuer.ids.get(t)
@@ -462,21 +460,24 @@ def main() -> None:
         help="RDF input file; omit or use '-' for stdin",
     )
     parser.add_argument(
-        "--format", "-f",
+        "--format",
+        "-f",
         default="nquads",
         dest="fmt",
         metavar="FORMAT",
         help="rdflib input format (default: nquads; e.g. turtle, trig)",
     )
     parser.add_argument(
-        "--hash-algorithm", "-a",
+        "--hash-algorithm",
+        "-a",
         default="sha256",
         dest="hash_algorithm",
         metavar="ALGO",
         help="hash algorithm: sha256 (default) or sha384",
     )
     parser.add_argument(
-        "--max-run-time", "-t",
+        "--max-run-time",
+        "-t",
         type=float,
         default=None,
         dest="max_run_time",
@@ -484,7 +485,8 @@ def main() -> None:
         help="wall-clock timeout in seconds; exits non-zero on timeout",
     )
     parser.add_argument(
-        "--max-work-factor", "-w",
+        "--max-work-factor",
+        "-w",
         type=int,
         default=None,
         dest="max_work_factor",

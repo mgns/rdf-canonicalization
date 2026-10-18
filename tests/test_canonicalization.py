@@ -27,14 +27,10 @@ FIXTURES_DIR = TESTS_DIR / "rdfc10"
 _manifest = json.loads((FIXTURES_DIR / "manifest.jsonld").read_text())
 
 _EVAL_CASES = [
-    (e["id"].lstrip("#"), e)
-    for e in _manifest["entries"]
-    if e["type"] == "rdfc:RDFC10EvalTest"
+    (e["id"].lstrip("#"), e) for e in _manifest["entries"] if e["type"] == "rdfc:RDFC10EvalTest"
 ]
 _MAP_CASES = [
-    (e["id"].lstrip("#"), e)
-    for e in _manifest["entries"]
-    if e["type"] == "rdfc:RDFC10MapTest"
+    (e["id"].lstrip("#"), e) for e in _manifest["entries"] if e["type"] == "rdfc:RDFC10MapTest"
 ]
 _NEG_CASES = [
     (e["id"].lstrip("#"), e)
@@ -47,7 +43,7 @@ _NEG_CASES = [
 # N-Quads parser that preserves blank-node labels
 # ---------------------------------------------------------------------------
 
-_QUAD_TOKENS = 4   # token count for a named-graph quad: s p o g
+_QUAD_TOKENS = 4  # token count for a named-graph quad: s p o g
 _TRIPLE_TOKENS = 3  # token count for a default-graph triple: s p o
 
 
@@ -79,19 +75,28 @@ def _parse(path: Path) -> rdflib.Dataset:  # noqa: C901, PLR0912, PLR0915
         )
 
     _esc = {
-        '\\"': '"', "\\'": "'", "\\\\": "\\",
-        "\\n": "\n", "\\r": "\r", "\\t": "\t", "\\b": "\b", "\\f": "\f",
+        '\\"': '"',
+        "\\'": "'",
+        "\\\\": "\\",
+        "\\n": "\n",
+        "\\r": "\r",
+        "\\t": "\t",
+        "\\b": "\b",
+        "\\f": "\f",
     }
 
     def _term(s: str) -> rdflib.term.Node:
         s = s.strip()
         if s.startswith("<"):
             m = iri_re.match(s)
+            assert m is not None
             return rdflib.URIRef(_decode_iri(m.group(1)))
         if s.startswith("_:"):
             m = bnode_re.match(s)
+            assert m is not None
             return _bnode(m.group(1))
         m = lit_re.match(s)
+        assert m is not None
         val = re.sub(
             r"\\(?:\"|'|\\|n|r|t|b|f|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})",
             lambda e: _esc.get(e.group(0)) or chr(int(e.group(0)[2:], 16)),
@@ -118,6 +123,7 @@ def _parse(path: Path) -> rdflib.Dataset:  # noqa: C901, PLR0912, PLR0915
                 end = line.index(">", pos) + 1
             elif line[pos : pos + 2] == "_:":
                 m_b = bnode_re.match(line, pos)
+                assert m_b is not None
                 end = m_b.end()
             elif ch == '"':
                 i = pos + 1
@@ -144,7 +150,7 @@ def _parse(path: Path) -> rdflib.Dataset:  # noqa: C901, PLR0912, PLR0915
             tokens.append(line[pos:end])
             pos = end
         if len(tokens) >= _QUAD_TOKENS:
-            ctx = g.get_context(_term(tokens[3]))
+            ctx = g.get_context(_term(tokens[3]))  # type: ignore[arg-type]
             ctx.add((_term(tokens[0]), _term(tokens[1]), _term(tokens[2])))
         elif len(tokens) >= _TRIPLE_TOKENS:
             default_ctx = g.default_graph if hasattr(g, "default_graph") else g.default_context
@@ -155,6 +161,7 @@ def _parse(path: Path) -> rdflib.Dataset:  # noqa: C901, PLR0912, PLR0915
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _normalize(
     graph: rdflib.Dataset,
@@ -187,6 +194,7 @@ def _issued_map(graph: rdflib.Dataset, hash_algorithm: str = "sha256") -> dict[s
 # ---------------------------------------------------------------------------
 # Test functions
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.parametrize(("test_id", "entry"), _EVAL_CASES, ids=[t[0] for t in _EVAL_CASES])
 def test_rdfc10_eval(test_id: str, entry: dict) -> None:  # noqa: ARG001

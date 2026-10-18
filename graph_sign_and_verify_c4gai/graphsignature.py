@@ -81,6 +81,7 @@ def verify_signature(
 def _load_graph(input_path: str | None, fmt: str) -> Graph:
     """Parse an RDF file (or stdin) into a ConjunctiveGraph."""
     from rdflib import ConjunctiveGraph  # local to avoid a top-level cycle risk
+
     g = ConjunctiveGraph()
     if input_path is None or input_path == "-":
         g.parse(data=sys.stdin.read(), format=fmt)
@@ -107,37 +108,43 @@ def main() -> None:
     # keygen
     kg = sub.add_parser("keygen", help="generate an RSA-2048 key pair")
     kg.add_argument(
-        "--out-private", default="private.pem", metavar="FILE",
+        "--out-private",
+        default="private.pem",
+        metavar="FILE",
         help="private key PEM output (default: private.pem)",
     )
     kg.add_argument(
-        "--out-public", default="public.pem", metavar="FILE",
+        "--out-public",
+        default="public.pem",
+        metavar="FILE",
         help="public key PEM output (default: public.pem)",
     )
 
     # hash
     hp = sub.add_parser("hash", help="print canonical RDFC 1.0 hash of a graph")
-    hp.add_argument("input", nargs="?", metavar="FILE",
-                    help="RDF input file or '-' for stdin")
+    hp.add_argument("input", nargs="?", metavar="FILE", help="RDF input file or '-' for stdin")
     hp.add_argument("--format", "-f", default="nquads", dest="fmt", metavar="FORMAT")
 
     # sign
     sg = sub.add_parser("sign", help="sign a graph's canonical hash")
     sg.add_argument("input", nargs="?", metavar="FILE")
     sg.add_argument("--format", "-f", default="nquads", dest="fmt", metavar="FORMAT")
-    sg.add_argument("--key", required=True, metavar="PRIVATE_KEY_PEM",
-                    help="PEM private key file")
-    sg.add_argument("--out", default="signature.bin", metavar="FILE",
-                    help="signature output file (default: signature.bin)")
+    sg.add_argument("--key", required=True, metavar="PRIVATE_KEY_PEM", help="PEM private key file")
+    sg.add_argument(
+        "--out",
+        default="signature.bin",
+        metavar="FILE",
+        help="signature output file (default: signature.bin)",
+    )
 
     # verify
     vf = sub.add_parser("verify", help="verify a signature against a graph")
     vf.add_argument("input", nargs="?", metavar="FILE")
     vf.add_argument("--format", "-f", default="nquads", dest="fmt", metavar="FORMAT")
-    vf.add_argument("--key", required=True, metavar="PUBLIC_KEY_PEM",
-                    help="PEM public key file")
-    vf.add_argument("--sig", required=True, metavar="SIGNATURE_FILE",
-                    help="binary signature file to verify")
+    vf.add_argument("--key", required=True, metavar="PUBLIC_KEY_PEM", help="PEM public key file")
+    vf.add_argument(
+        "--sig", required=True, metavar="SIGNATURE_FILE", help="binary signature file to verify"
+    )
 
     args = parser.parse_args()
 

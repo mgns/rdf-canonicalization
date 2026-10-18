@@ -76,6 +76,7 @@ def _build_graph(triples: list[_Triple]) -> rdflib.ConjunctiveGraph:
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _relabel(
     g: rdflib.ConjunctiveGraph,
     mapping: dict[str, str],
@@ -110,6 +111,7 @@ def _shuffle_graph(
 # ---------------------------------------------------------------------------
 # Property tests
 # ---------------------------------------------------------------------------
+
 
 @given(graph=_graph_st())
 @settings(max_examples=200)
