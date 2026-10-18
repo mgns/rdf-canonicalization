@@ -1,14 +1,9 @@
-from datetime import time, datetime, date
-from typing import List, LiteralString
-
-from rdflib import Graph, BNode
 import hashlib
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
+from datetime import date, datetime, time
 
-
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from rdflib import BNode, Graph
 
 blank_id = {}
 non_normalized = set()  # Set of non-normalized RdfValue objects
@@ -43,7 +38,7 @@ def find_blank_nodes(graph: Graph):
 
 # Step 2: Hash the Canonicalized RDF Graph
 def hash_rdf(canonicalized_graph: str):
-    return hashlib.sha256(canonicalized_graph.encode('utf-8')).digest()
+    return hashlib.sha256(canonicalized_graph.encode("utf-8")).digest()
 
 # Step 3: Generate a Key Pair
 def generate_key_pair():
@@ -79,47 +74,48 @@ def verify_signature(public_key, rdf_hash, signature):
             hashes.SHA256(),
         )
         return True
-    except Exception as e:
+    except Exception:
         return False
 
-# Example Usage
-if __name__ == "__main__":
-    file = "order-1.nt"
+def main(input_file):
+    if __name__ == "__main__":
+        file = "order-1.nt"
 
-    # Create an RDF graph
-    g = Graph()
-    g.parse(file)
+        # Create an RDF graph
+        g = Graph()
+        g.parse(file)
 
-    # Canonicalize the graph
-    canonical_graph = canonicalize_rdf(g)
-    # canonicalize_rdf(g)
-    print("Canonical Graph:\n", canonical_graph)
+        # Canonicalize the graph
+        canonical_graph = canonicalize_rdf(g)
+        # canonicalize_rdf(g)
+        print("Canonical Graph:\n", canonical_graph)
 
-    # Hash the canonical graph
-    rdf_hash = hash_rdf(canonical_graph)
-    print("Hash:", rdf_hash.hex())
-    with open(file + ".sha", "a") as f:
-        f.write(rdf_hash.hex())
-        f.write(" canonicalize_rdf\n")
+        # Hash the canonical graph
+        rdf_hash = hash_rdf(canonical_graph)
+        print("Hash:", rdf_hash.hex())
+        with open(file + ".sha", "a") as f:
+            f.write(rdf_hash.hex())
+            f.write(" canonicalize_rdf\n")
 
-    # Generate keys
-    private_key, public_key = generate_key_pair()
+        # Generate keys
+        private_key, public_key = generate_key_pair()
 
-    # Sign the hash
-    signature = sign_hash(private_key, rdf_hash)
-    print("Signature:", signature.hex())
+        # Sign the hash
+        signature = sign_hash(private_key, rdf_hash)
+        print("Signature:", signature.hex())
 
-    # Verify the signature
-    is_valid = verify_signature(public_key, rdf_hash, signature)
-    print("Signature valid:", is_valid)
+        # Verify the signature
+        is_valid = verify_signature(public_key, rdf_hash, signature)
+        print("Signature valid:", is_valid)
 
-    # Export public key (optional for external verification)
-    public_key_pem = public_key.public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo,
-    )
-    print("Public Key (PEM):\n", public_key_pem.decode("utf-8"))
+        # Export public key (optional for external verification)
+        public_key_pem = public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        print("Public Key (PEM):\n", public_key_pem.decode("utf-8"))
 
-    exit = time()
-    duration = datetime.combine(date.today(), exit) - datetime.combine(date.today(), start_time)
-    print("Time:\n", duration)
+        exit = time()
+        duration = datetime.combine(date.today(), exit) - datetime.combine(date.today(), start_time)
+        print("Time:\n", duration)
+

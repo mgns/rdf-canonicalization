@@ -6,7 +6,6 @@ g.parse("order-1.nt")
 
 print(len(g))
 
-import pprint
 
 #for stmt in g:
 #    pprint.pprint(stmt)
@@ -19,10 +18,10 @@ newline = "\n"
 
 line: str
 with open("tmp/normalized_nt-sort.nt", "wb") as f:
-    for line in sorted(g.serialize(format='nt').splitlines()):
+    for line in sorted(g.serialize(format="nt").splitlines()):
         if line:
             line = line + newline
-            f.write(line.encode(encoding="utf-8", errors='strict'))
+            f.write(line.encode(encoding="utf-8", errors="strict"))
 
 
 
