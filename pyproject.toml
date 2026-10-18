@@ -15,7 +15,6 @@ readme = "README-public.md"
 python = "^3.11"
 cryptography = "^43.0.3"
 rdflib = "^7.0"
-memray = "^1.20.0"
 
 
 [tool.poetry.scripts]
@@ -25,6 +24,7 @@ graphsign    = "graph_sign_and_verify_c4gai.graphsignature:main"
 
 [tool.poetry.group.dev.dependencies]
 genbadge = {extras = ["coverage"], version = "^1.1.1"}
+memray = "^1.20.0"
 mypy = "^1.11.1"
 pip = "^24"
 pytest = "^8.3.2"
