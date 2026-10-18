@@ -12,9 +12,10 @@ readme = "README-public.md"
 
 
 [tool.poetry.dependencies]
-python = ">=3.11, ^3"
+python = "^3.11"
 cryptography = "^43.0.3"
 rdflib = "^7.0"
+memray = "^1.20.0"
 
 
 [tool.poetry.scripts]

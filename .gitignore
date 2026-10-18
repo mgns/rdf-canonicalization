@@ -148,3 +148,4 @@ artifacts
 .DS_Store
 .task
 .copier-answers.env
+.idea/
