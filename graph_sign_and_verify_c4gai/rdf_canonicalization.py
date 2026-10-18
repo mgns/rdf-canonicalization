@@ -1,6 +1,7 @@
 """RDFC 1.0 (W3C Recommendation 2024) RDF Dataset Canonicalization."""
 
 import argparse
+import functools
 import hashlib
 import itertools
 import sys
@@ -41,6 +42,7 @@ class RdfCanonicalization:
         self.max_run_time = max_run_time
         self.max_work_factor = max_work_factor
         self._hash_alg = hash_algorithm.lower().replace("-", "")
+        self._new_hash = functools.partial(hashlib.new, self._hash_alg)
         self.blank_id_to_quad_set: defaultdict[rdflib.BNode, set[_Quad]] = defaultdict(set)
         self.canon_issuer = IdentifierIssuer()
         self.hash_to_blank_id: defaultdict[str, set[rdflib.BNode]] = defaultdict(set)
@@ -131,7 +133,7 @@ class RdfCanonicalization:
                         self.canon_issuer.get_id(bn)
         self.non_normalized.clear()
 
-    def hash_n_degree_quads(  # noqa: C901, PLR0912
+    def hash_n_degree_quads(  # noqa: C901, PLR0912, PLR0915
         self,
         blank_id: rdflib.BNode,
         issuer: "IdentifierIssuer",
@@ -159,6 +161,30 @@ class RdfCanonicalization:
         for related_hash in sorted(h_to_bnodes.keys()):
             related_bnodes = h_to_bnodes[related_hash]
             data_to_hash += related_hash
+
+            if len(related_bnodes) == 1:
+                # Single-element group: exactly one permutation, no copy needed
+                self._work_counter += 1
+                if self._max_work is not None and self._work_counter > self._max_work:
+                    raise TimeoutError(
+                        f"Normalization exceeded work factor limit "
+                        f"({self._max_work} permutation steps).",
+                    )
+                if self.max_run_time and self._work_counter % 256 == 0:
+                    self.check_runtime()
+                component = related_bnodes[0]
+                if (
+                    (cid := self.canon_issuer.ids.get(component)) is not None
+                    or (cid := issuer.ids.get(component)) is not None
+                ):
+                    chosen_path = cid
+                else:
+                    chosen_path = issuer.get_id(component)
+                    result_hash, issuer = self.hash_n_degree_quads(component, issuer)
+                    chosen_path += issuer.ids[component] + "<" + result_hash + ">"
+                data_to_hash += chosen_path
+                continue
+
             chosen_path = ""
             chosen_issuer = None
             for permutation in itertools.permutations(sorted(related_bnodes, key=str)):
@@ -168,16 +194,18 @@ class RdfCanonicalization:
                         f"Normalization exceeded work factor limit "
                         f"({self._max_work} permutation steps).",
                     )
-                self.check_runtime()
+                if self.max_run_time and self._work_counter % 256 == 0:
+                    self.check_runtime()
                 issuer_copy = issuer.copy()
                 path = ""
-                recursion_list = []
+                recursion_list: list[rdflib.BNode] = []
                 skip = False
                 for component in permutation:
-                    if self.canon_issuer.has_id(component):
-                        path += self.canon_issuer.ids[component]
-                    elif issuer_copy.has_id(component):
-                        path += issuer_copy.ids[component]
+                    if (
+                        (cid := self.canon_issuer.ids.get(component)) is not None
+                        or (cid := issuer_copy.ids.get(component)) is not None
+                    ):
+                        path += cid
                     else:
                         path += issuer_copy.get_id(component)
                         recursion_list.append(component)
@@ -197,7 +225,7 @@ class RdfCanonicalization:
             data_to_hash += chosen_path
             if chosen_issuer:
                 issuer = chosen_issuer
-        return hashlib.new(self._hash_alg, data_to_hash.encode("utf-8")).hexdigest(), issuer
+        return self._new_hash(data_to_hash.encode("utf-8")).hexdigest(), issuer
 
     def _hash_related_blank_node(
         self,
@@ -210,16 +238,15 @@ class RdfCanonicalization:
 
         For position 'g' (graph name), no predicate term is included.
         """
-        if self.canon_issuer.has_id(related):
-            identifier = self.canon_issuer.ids[related]
-        elif issuer.has_id(related):
-            identifier = issuer.ids[related]
-        else:
-            identifier = self.hash_first_degree(related)
+        identifier = (
+            self.canon_issuer.ids.get(related)
+            or issuer.ids.get(related)
+            or self.hash_first_degree(related)
+        )
         if position == "g":
-            return hashlib.new(self._hash_alg, (position + identifier).encode("utf-8")).hexdigest()
+            return self._new_hash((position + identifier).encode("utf-8")).hexdigest()
         data = (position + f"<{predicate}>" + identifier).encode("utf-8")
-        return hashlib.new(self._hash_alg, data).hexdigest()
+        return self._new_hash(data).hexdigest()
 
     def hash_first_degree(self, blank_id: rdflib.BNode) -> str:
         r"""HashFirstDegreeQuads (§4.6): hash the canonical N-Quads of adjacent quads.
@@ -229,7 +256,7 @@ class RdfCanonicalization:
         """
         quads = self.blank_id_to_quad_set[blank_id]
         serialized_quads = sorted(self._serialize_quad_fd(q, blank_id) for q in quads)
-        return hashlib.new(self._hash_alg, "".join(serialized_quads).encode("utf-8")).hexdigest()
+        return self._new_hash("".join(serialized_quads).encode("utf-8")).hexdigest()
 
     def _serialize_quad_fd(self, quad: _Quad, blank_id: rdflib.BNode) -> str:
         r"""Serialize one quad for HashFirstDegreeQuads (§4.6 step 3).
