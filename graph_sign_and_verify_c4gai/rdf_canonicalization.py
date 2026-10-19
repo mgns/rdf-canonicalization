@@ -12,7 +12,8 @@ from collections.abc import Iterator
 import rdflib
 from rdflib import ConjunctiveGraph, Graph
 
-# Preserve input lexical forms — do not normalise dateTime, integers, etc.
+# Preserve input lexical forms — required for RDFC 1.0 spec compliance (§4.5).
+# Side effect: mutates rdflib global state for all rdflib usage in this process.
 rdflib.NORMALIZE_LITERALS = False
 
 XSD_STRING = rdflib.URIRef("http://www.w3.org/2001/XMLSchema#string")

@@ -2,10 +2,17 @@
 name = "graph-sign-and-verify-c4gai"
 version = "0.0.0"
 license = "Apache-2.0"
-description = "Sign and verify your awesome Knowledge Graphs with eccenca Corporate Memory :-)"
-authors = ["eccenca GmbH <magnus.knuth@eccenca.com>"]
+description = "RDF dataset canonicalization (RDFC 1.0) and RSA-PSS graph signing for Python"
+authors = ["eccenca GmbH <532480+mgns@users.noreply.github.com>"]
+keywords = ["rdf", "canonicalization", "rdfc10", "knowledge-graph", "cryptography"]
 classifiers = [
     "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Security :: Cryptography",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
 ]
 readme = "README-public.md"
 
