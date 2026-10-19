@@ -1,5 +1,7 @@
 # graph-sign-and-verify-c4gai
 
+This project has been developed in the [German-French Joint Call On “ARTIFICIAL INTELLIGENCE” – Crypto4Graph-AI](https://crypto4graph-ai.github.io/) funded by the [French National Research Agency](https://anr.fr/en/) and [German Federal Ministry of Education and Research](https://www.bmbf.de/EN/).
+
 Sign and verify your awesome Knowledge Graphs with eccenca Corporate Memory :-)
 
   
