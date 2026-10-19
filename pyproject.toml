@@ -8,6 +8,7 @@ keywords = ["rdf", "canonicalization", "rdfc10", "knowledge-graph", "cryptograph
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
     "Topic :: Security :: Cryptography",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
